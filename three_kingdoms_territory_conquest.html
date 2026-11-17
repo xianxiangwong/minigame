@@ -1,0 +1,1888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Three Kingdoms: Territory Conquest (朕的江山)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Noto+Serif+SC:wght@600;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+    }
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #2b331f;
+      font-family: 'Inter', 'Noto Serif SC', sans-serif;
+    }
+    .font-title {
+      font-family: 'Cinzel', 'Noto Serif SC', serif;
+    }
+    .font-cn {
+      font-family: 'Noto Serif SC', serif;
+    }
+    /* Custom ornamental panel styling */
+    .imperial-panel {
+      background: linear-gradient(180deg, rgba(38, 30, 22, 0.94) 0%, rgba(24, 19, 14, 0.96) 100%);
+      border: 1.5px solid #b48a3e;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 226, 153, 0.25);
+    }
+    .imperial-btn {
+      background: linear-gradient(180deg, #4b3926 0%, #2e2216 100%);
+      border: 1px solid #c59b48;
+      color: #f6e7c1;
+      transition: all 0.15s ease;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+    }
+    .imperial-btn:hover {
+      background: linear-gradient(180deg, #634b32 0%, #3d2d1d 100%);
+      border-color: #f3c669;
+      transform: translateY(-1px);
+    }
+    .imperial-btn:active {
+      transform: translateY(1px);
+    }
+    .imperial-btn.active {
+      background: linear-gradient(180deg, #d99b26 0%, #9c6812 100%);
+      border-color: #ffe599;
+      color: #1a1208;
+      font-weight: 700;
+      box-shadow: 0 0 12px rgba(245, 185, 66, 0.5);
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+<body class="relative w-screen h-screen overflow-hidden">
+
+  <!-- Main Interactive Game Canvas -->
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- TOP HUD BAR -->
+  <div class="fixed top-0 left-0 right-0 z-20 pointer-events-none px-2 pt-2 sm:px-4 sm:pt-3 flex flex-col gap-2">
+    <div class="max-w-5xl w-full mx-auto flex flex-wrap items-center justify-between gap-2 pointer-events-auto">
+      
+      <!-- Brand & Stage Selector -->
+      <div class="imperial-panel rounded-xl px-3 py-1.5 flex items-center gap-2 sm:gap-3">
+        <div class="flex items-center gap-1.5">
+          <span class="text-amber-400 text-lg sm:text-xl font-cn font-black tracking-wider">朕的江山</span>
+          <span class="hidden md:inline-block text-xs text-amber-200/70 font-title uppercase tracking-widest border-l border-amber-500/30 pl-2">Three Kingdoms</span>
+        </div>
+        <select id="stageSelect" aria-label="Select Stage" class="bg-[#1e1710] text-amber-100 text-xs sm:text-sm font-semibold border border-amber-600/60 rounded-lg px-2 py-1 focus:outline-none focus:border-amber-400 cursor-pointer">
+          <option value="0">Stage I: Shu Han Heartland (巴蜀争锋)</option>
+          <option value="1">Stage II: Three Kingdoms Clash (三国鼎立)</option>
+          <option value="2">Stage III: Central Plains Hegemony (中原逐鹿)</option>
+        </select>
+        <select id="difficultySelect" aria-label="Select Difficulty" class="bg-[#1e1710] text-amber-200 text-xs sm:text-sm font-semibold border border-amber-600/60 rounded-lg px-2 py-1 focus:outline-none focus:border-amber-400 cursor-pointer">
+          <option value="casual" selected>Casual (轻松)</option>
+          <option value="normal">Normal (标准)</option>
+          <option value="hard">Hard (硬核)</option>
+        </select>
+      </div>
+
+      <!-- Troop Balance Bar -->
+      <div class="imperial-panel rounded-xl px-3 py-1.5 flex-1 min-w-[210px] max-w-md flex flex-col justify-center">
+        <div class="flex justify-between text-[11px] sm:text-xs font-bold mb-1 px-0.5">
+          <span id="shuStatLabel" class="text-sky-400 flex items-center gap-1">
+            <span class="inline-block w-2 h-2 rounded-full bg-sky-400"></span> SHU: 0
+          </span>
+          <span id="wuStatLabel" class="text-emerald-400 hidden items-center gap-1">
+            <span class="inline-block w-2 h-2 rounded-full bg-emerald-400"></span> WU: 0
+          </span>
+          <span id="weiStatLabel" class="text-rose-400 flex items-center gap-1">
+            <span class="inline-block w-2 h-2 rounded-full bg-rose-400"></span> WEI: 0
+          </span>
+        </div>
+        <div class="w-full h-2.5 bg-stone-900 rounded-full overflow-hidden flex border border-amber-900/70">
+          <div id="barShu" class="bg-gradient-to-r from-sky-600 to-sky-400 h-full transition-all duration-300" style="width: 50%"></div>
+          <div id="barWu" class="bg-gradient-to-r from-emerald-600 to-emerald-400 h-full transition-all duration-300" style="width: 0%"></div>
+          <div id="barNeutral" class="bg-stone-600 h-full transition-all duration-300" style="width: 20%"></div>
+          <div id="barWei" class="bg-gradient-to-r from-rose-500 to-rose-700 h-full transition-all duration-300" style="width: 30%"></div>
+        </div>
+      </div>
+
+      <!-- Controls: Speed, Audio, Pause, Help -->
+      <div class="imperial-panel rounded-xl px-2 py-1.5 flex items-center gap-1.5">
+        <button id="btnSpeed" class="imperial-btn rounded-lg px-2.5 py-1 text-xs font-bold min-w-[40px]" title="Toggle Game Speed">1x</button>
+        <button id="btnPause" class="imperial-btn rounded-lg px-2.5 py-1 text-xs font-bold" title="Pause / Resume">⏸</button>
+        <button id="btnRestart" class="imperial-btn rounded-lg px-2.5 py-1 text-xs font-bold" title="Restart Stage">↻</button>
+        <button id="btnSound" class="imperial-btn rounded-lg px-2.5 py-1 text-xs font-bold" title="Toggle Sound">🔊</button>
+        <button id="btnHelp" class="imperial-btn rounded-lg px-2.5 py-1 text-xs font-bold text-amber-300" title="How to Play">?</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM HUD CONTROLS -->
+  <div class="fixed bottom-0 left-0 right-0 z-20 pointer-events-none px-2 pb-2 sm:px-4 sm:pb-4 flex flex-col items-center gap-2">
+    
+    <!-- Contextual City Inspector / Upgrade Bar (Appears when 1+ owned cities are selected) -->
+    <div id="cityActionPanel" class="hidden pointer-events-auto imperial-panel rounded-2xl px-4 py-2.5 flex items-center gap-3 sm:gap-4 shadow-2xl transition-all">
+      <div class="flex flex-col">
+        <div class="flex items-center gap-2">
+          <span id="selectedCityName" class="font-cn font-bold text-amber-300 text-sm sm:text-base">成都 Chengdu</span>
+          <span id="selectedCityStars" class="text-amber-400 text-xs sm:text-sm tracking-tighter">★☆☆</span>
+        </div>
+        <span id="selectedCityStats" class="text-[11px] text-amber-100/75">Garrison: 45/100 • +1.0/s • Def 1.0x</span>
+      </div>
+      <button id="btnUpgradeCity" class="imperial-btn rounded-xl px-3.5 py-2 text-xs sm:text-sm font-bold flex items-center gap-1.5 whitespace-nowrap">
+        <span>⬆ Upgrade</span>
+        <span id="upgradeCostBadge" class="bg-black/40 text-amber-300 px-1.5 py-0.5 rounded text-xs">20 ⚔</span>
+      </button>
+    </div>
+
+    <!-- Main Dispatch Percentage & Quick Actions Bar -->
+    <div class="pointer-events-auto imperial-panel rounded-2xl px-3 py-2 flex items-center gap-2 sm:gap-3 shadow-xl">
+      <span class="text-[11px] sm:text-xs font-semibold text-amber-200/80 uppercase tracking-wider hidden sm:inline">Dispatch:</span>
+      <div class="flex items-center bg-black/40 p-1 rounded-xl border border-amber-700/40 gap-1">
+        <button id="btnPct50" class="imperial-btn active rounded-lg px-3 py-1.5 text-xs sm:text-sm font-bold">50% Troops</button>
+        <button id="btnPct100" class="imperial-btn rounded-lg px-3 py-1.5 text-xs sm:text-sm font-bold">100% All-In</button>
+      </div>
+      <button id="btnSelectAll" class="imperial-btn rounded-xl px-3 py-1.5 text-xs sm:text-sm font-semibold text-sky-300" title="Select all your cities">
+        Select All
+      </button>
+    </div>
+  </div>
+
+  <!-- TOAST MESSAGE BANNER -->
+  <div id="toastBanner" class="fixed top-20 left-1/2 -translate-x-1/2 z-30 pointer-events-none opacity-0 transition-opacity duration-300">
+    <div class="imperial-panel rounded-full px-4 py-1.5 text-xs sm:text-sm font-semibold text-amber-200 shadow-lg">
+      <span id="toastText">City Upgraded!</span>
+    </div>
+  </div>
+
+  <!-- HOW TO PLAY / WELCOME MODAL -->
+  <div id="helpModal" class="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="imperial-panel rounded-2xl max-w-md w-full p-5 sm:p-6 text-amber-50 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-amber-600/40 pb-3 mb-4">
+        <div>
+          <h2 class="font-cn text-xl sm:text-2xl font-black text-amber-400">朕的江山 • 战术指南</h2>
+          <p class="text-xs text-amber-200/70 font-title tracking-wider">THREE KINGDOMS CONQUEST GUIDE</p>
+        </div>
+        <button id="btnCloseHelp" class="imperial-btn rounded-lg w-8 h-8 flex items-center justify-center font-bold">✕</button>
+      </div>
+      <ul class="space-y-2.5 text-xs sm:text-sm text-amber-100/90 leading-relaxed mb-5">
+        <li class="flex items-start gap-2.5">
+          <span class="text-amber-400 font-bold text-base">⚔️</span>
+          <span><strong>Drag to Dispatch:</strong> Drag from your <span class="text-sky-400 font-bold">Blue (Shu)</span> cities to any target city to march troops along the roads. Drag across multiple owned cities to multi-select!</span>
+        </li>
+        <li class="flex items-start gap-2.5">
+          <span class="text-amber-400 font-bold text-base">🏯</span>
+          <span><strong>Upgrade Citadels:</strong> Tap/click a selected owned city (or click <strong>Upgrade</strong>) to spend troops and raise its Star Level (★ to ★★★), boosting troop generation, capacity, and defense.</span>
+        </li>
+        <li class="flex items-start gap-2.5">
+          <span class="text-amber-400 font-bold text-base">🧭</span>
+          <span><strong>Auto-Pathfinding:</strong> You can target distant cities directly—your armies will automatically march along connected road networks.</span>
+        </li>
+        <li class="flex items-start gap-2.5">
+          <span class="text-amber-400 font-bold text-base">👑</span>
+          <span><strong>Victory Condition:</strong> Conquer all enemy <span class="text-rose-400 font-bold">Wei (Red)</span> and <span class="text-emerald-400 font-bold">Wu (Green)</span> cities to unify the realm!</span>
+        </li>
+      </ul>
+      <button id="btnStartBattle" class="w-full py-2.5 rounded-xl font-bold text-sm sm:text-base bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-stone-950 shadow-lg hover:brightness-110 transition cursor-pointer">
+        Enter Battlefield (开始征战)
+      </button>
+    </div>
+  </div>
+
+  <!-- VICTORY / DEFEAT MODAL -->
+  <div id="endGameModal" class="hidden fixed inset-0 z-40 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="imperial-panel rounded-2xl max-w-md w-full p-6 text-center text-amber-50 shadow-2xl">
+      <div id="endGameBadge" class="inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest mb-2 bg-amber-500/20 text-amber-300 border border-amber-500/40">
+        Campaign Complete
+      </div>
+      <h2 id="endGameTitle" class="font-cn text-2xl sm:text-3xl font-black text-amber-400 mb-1">一统天下 • VICTORY</h2>
+      <p id="endGameSubtitle" class="text-xs sm:text-sm text-amber-100/80 mb-5">All rival warlords have submitted to your banner.</p>
+      
+      <div class="grid grid-cols-3 gap-2 bg-black/40 rounded-xl p-3 border border-amber-700/40 mb-5">
+        <div class="flex flex-col">
+          <span class="text-[10px] uppercase text-amber-200/60">Battle Time</span>
+          <span id="statTime" class="text-sm sm:text-base font-bold text-amber-300">01:24</span>
+        </div>
+        <div class="flex flex-col border-x border-amber-700/30">
+          <span class="text-[10px] uppercase text-amber-200/60">Troops Sent</span>
+          <span id="statTroops" class="text-sm sm:text-base font-bold text-sky-300">420</span>
+        </div>
+        <div class="flex flex-col">
+          <span class="text-[10px] uppercase text-amber-200/60">Captures</span>
+          <span id="statCaptures" class="text-sm sm:text-base font-bold text-emerald-300">11</span>
+        </div>
+      </div>
+
+      <div class="flex gap-3">
+        <button id="btnModalRestart" class="flex-1 imperial-btn rounded-xl py-2.5 text-sm font-bold">Replay Stage</button>
+        <button id="btnNextStage" class="flex-1 rounded-xl py-2.5 text-sm font-bold bg-gradient-to-r from-amber-500 to-amber-400 text-stone-950 shadow-lg hover:brightness-110 transition">Next Stage ➔</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /**
+     * ============================================================================
+     * THREE KINGDOMS: TERRITORY CONQUEST (朕的江山)
+     * Complete Node-Based Real-Time Strategy Game Engine
+     * ============================================================================
+     */
+
+    // --- 1. WEB AUDIO API SYNTHESIZER (No external sound dependencies) ---
+    class SoundFX {
+      constructor() {
+        this.enabled = true;
+        this.ctx = null;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+      playTone(freq, type, duration, vol = 0.12, slideTo = null) {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+          if (slideTo) {
+            osc.frequency.exponentialRampToValueAtTime(slideTo, this.ctx.currentTime + duration);
+          }
+          gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + duration);
+        } catch (e) {}
+      }
+      playSelect() {
+        this.playTone(520, 'triangle', 0.08, 0.1, 680);
+      }
+      playMarch() {
+        // War drum + horn subtle pulse
+        this.playTone(130, 'sine', 0.18, 0.18, 65);
+        setTimeout(() => this.playTone(330, 'triangle', 0.14, 0.08, 392), 40);
+      }
+      playClash() {
+        this.playTone(190, 'sawtooth', 0.09, 0.07, 90);
+      }
+      playCapture(isPlayer) {
+        if (isPlayer) {
+          this.playTone(440, 'triangle', 0.14, 0.15);
+          setTimeout(() => this.playTone(554.37, 'triangle', 0.14, 0.15), 90);
+          setTimeout(() => this.playTone(659.25, 'triangle', 0.25, 0.18), 180);
+        } else {
+          this.playTone(300, 'sawtooth', 0.18, 0.12, 180);
+        }
+      }
+      playUpgrade() {
+        this.playTone(523.25, 'sine', 0.12, 0.15);
+        setTimeout(() => this.playTone(659.25, 'sine', 0.12, 0.15), 75);
+        setTimeout(() => this.playTone(783.99, 'sine', 0.12, 0.15), 150);
+        setTimeout(() => this.playTone(1046.5, 'triangle', 0.28, 0.18), 225);
+      }
+      playVictory() {
+        const notes = [523.25, 659.25, 783.99, 1046.5];
+        notes.forEach((n, idx) => {
+          setTimeout(() => this.playTone(n, 'triangle', 0.3, 0.18), idx * 130);
+        });
+      }
+      playDefeat() {
+        const notes = [392.0, 349.23, 311.13, 261.63];
+        notes.forEach((n, idx) => {
+          setTimeout(() => this.playTone(n, 'sawtooth', 0.32, 0.14), idx * 160);
+        });
+      }
+    }
+
+    const sfx = new SoundFX();
+
+    // --- 2. FACTIONS & CONFIGURATION ---
+    const FACTIONS = {
+      neutral: {
+        id: 'neutral',
+        name: 'Neutral',
+        cn: '中立',
+        primary: '#78716c',
+        secondary: '#a8a29e',
+        roof: '#b45309',
+        roofHighlight: '#d97706',
+        badgeBg: '#44403c',
+        text: '#f5f5f4',
+        glow: 'rgba(168, 162, 158, 0.35)'
+      },
+      shu: {
+        id: 'shu',
+        name: 'Shu Han',
+        cn: '蜀汉',
+        primary: '#0284c7',
+        secondary: '#38bdf8',
+        roof: '#eab308',
+        roofHighlight: '#fde047',
+        badgeBg: '#0369a1',
+        text: '#ffffff',
+        glow: 'rgba(56, 189, 248, 0.55)'
+      },
+      wei: {
+        id: 'wei',
+        name: 'Cao Wei',
+        cn: '曹魏',
+        primary: '#dc2626',
+        secondary: '#f87171',
+        roof: '#991b1b',
+        roofHighlight: '#ef4444',
+        badgeBg: '#991b1b',
+        text: '#ffffff',
+        glow: 'rgba(248, 113, 113, 0.5)'
+      },
+      wu: {
+        id: 'wu',
+        name: 'Eastern Wu',
+        cn: '东吴',
+        primary: '#059669',
+        secondary: '#34d399',
+        roof: '#065f46',
+        roofHighlight: '#10b981',
+        badgeBg: '#065f46',
+        text: '#ffffff',
+        glow: 'rgba(52, 211, 153, 0.5)'
+      }
+    };
+
+    const STAR_CONFIG = {
+      1: { maxTroops: 100, regenRate: 1.15, defense: 1.0, upgradeCost: 18, scale: 0.92 },
+      2: { maxTroops: 200, regenRate: 1.85, defense: 1.2, upgradeCost: 35, scale: 1.06 },
+      3: { maxTroops: 300, regenRate: 2.6, defense: 1.35, upgradeCost: null, scale: 1.22 }
+    };
+
+    const DIFFICULTY_SETTINGS = {
+      casual: {
+        aiThinkMult: 1.85,      // AI acts much slower
+        aiRegenMult: 0.72,      // AI regenerates troops slower
+        aiStartMult: 0.72,      // AI starts with fewer garrison troops
+        neutralMult: 0.65,      // Neutral cities are easier to capture early
+        playerStartBonus: 12,   // Extra starting troops for Shu
+        aiUpgradeChance: 0.12
+      },
+      normal: {
+        aiThinkMult: 1.3,
+        aiRegenMult: 0.9,
+        aiStartMult: 0.88,
+        neutralMult: 0.85,
+        playerStartBonus: 6,
+        aiUpgradeChance: 0.25
+      },
+      hard: {
+        aiThinkMult: 0.95,
+        aiRegenMult: 1.08,
+        aiStartMult: 1.05,
+        neutralMult: 1.0,
+        playerStartBonus: 0,
+        aiUpgradeChance: 0.4
+      }
+    };
+
+    // --- 3. STAGE / MAP DEFINITIONS (Normalized 0..1 coordinates for responsive scaling) ---
+    const STAGES = [
+      {
+        title: 'Stage I: Shu Han Heartland (巴蜀争锋)',
+        aiThinkInterval: 2.4,
+        nodes: [
+          { id: 0, cn: '成都', en: 'Chengdu', x: 0.48, y: 0.54, owner: 'shu', troops: 45, level: 2 },
+          { id: 1, cn: '绵竹', en: 'Mianzhu', x: 0.24, y: 0.34, owner: 'shu', troops: 20, level: 1 },
+          { id: 2, cn: '建威', en: 'Jianwei', x: 0.20, y: 0.52, owner: 'neutral', troops: 10, level: 1 },
+          { id: 3, cn: '涪陵', en: 'Fuling', x: 0.22, y: 0.70, owner: 'neutral', troops: 12, level: 1 },
+          { id: 4, cn: '梓潼', en: 'Zitong', x: 0.28, y: 0.85, owner: 'neutral', troops: 8, level: 1 },
+          { id: 5, cn: '江油', en: 'Jiangyou', x: 0.50, y: 0.88, owner: 'neutral', troops: 10, level: 1 },
+          { id: 6, cn: '南乡', en: 'Nanxiang', x: 0.50, y: 0.72, owner: 'neutral', troops: 14, level: 1 },
+          { id: 7, cn: '葭萌', en: 'Jiameng', x: 0.74, y: 0.84, owner: 'neutral', troops: 12, level: 1 },
+          { id: 8, cn: '平都', en: 'Pingdu', x: 0.78, y: 0.68, owner: 'neutral', troops: 10, level: 1 },
+          { id: 9, cn: '繁县', en: 'Fanxian', x: 0.78, y: 0.50, owner: 'neutral', troops: 14, level: 1 },
+          { id: 10, cn: '充国', en: 'Chongguo', x: 0.50, y: 0.38, owner: 'neutral', troops: 18, level: 1 },
+          { id: 11, cn: '上庸', en: 'Shangyong', x: 0.75, y: 0.31, owner: 'wei', troops: 22, level: 1 },
+          { id: 12, cn: '南郑', en: 'Nanzheng', x: 0.49, y: 0.20, owner: 'wei', troops: 28, level: 1 },
+          { id: 13, cn: '汉中', en: 'Hanzhong', x: 0.82, y: 0.16, owner: 'wei', troops: 45, level: 2 }
+        ],
+        edges: [
+          [0, 2], [0, 3], [0, 6], [0, 8], [0, 9], [0, 10],
+          [1, 2], [1, 10], [1, 12],
+          [2, 3],
+          [3, 4],
+          [4, 5], [4, 6],
+          [5, 6], [5, 7],
+          [6, 7], [6, 8],
+          [7, 8],
+          [8, 9],
+          [9, 10], [9, 11],
+          [10, 11], [10, 12],
+          [11, 12], [11, 13],
+          [12, 13]
+        ]
+      },
+      {
+        title: 'Stage II: Three Kingdoms Clash (三国鼎立)',
+        aiThinkInterval: 2.0,
+        nodes: [
+          { id: 0, cn: '成都', en: 'Chengdu', x: 0.18, y: 0.78, owner: 'shu', troops: 50, level: 2 },
+          { id: 1, cn: '梓潼', en: 'Zitong', x: 0.16, y: 0.54, owner: 'shu', troops: 20, level: 1 },
+          { id: 2, cn: '涪陵', en: 'Fuling', x: 0.38, y: 0.84, owner: 'neutral', troops: 12, level: 1 },
+          { id: 3, cn: '汉中', en: 'Hanzhong', x: 0.22, y: 0.30, owner: 'neutral', troops: 18, level: 1 },
+          { id: 4, cn: '长安', en: 'Chang’an', x: 0.36, y: 0.16, owner: 'wei', troops: 25, level: 1 },
+          { id: 5, cn: '洛阳', en: 'Luoyang', x: 0.56, y: 0.17, owner: 'wei', troops: 52, level: 2 },
+          { id: 6, cn: '许昌', en: 'Xuchang', x: 0.74, y: 0.26, owner: 'wei', troops: 24, level: 1 },
+          { id: 7, cn: '襄阳', en: 'Xiangyang', x: 0.48, y: 0.46, owner: 'neutral', troops: 24, level: 2 },
+          { id: 8, cn: '江陵', en: 'Jiangling', x: 0.44, y: 0.66, owner: 'neutral', troops: 15, level: 1 },
+          { id: 9, cn: '赤壁', en: 'Chibi', x: 0.62, y: 0.64, owner: 'neutral', troops: 16, level: 1 },
+          { id: 10, cn: '合肥', en: 'Hefei', x: 0.76, y: 0.46, owner: 'neutral', troops: 18, level: 1 },
+          { id: 11, cn: '建业', en: 'Jianye', x: 0.84, y: 0.76, owner: 'wu', troops: 52, level: 2 },
+          { id: 12, cn: '柴桑', en: 'Chaisang', x: 0.64, y: 0.84, owner: 'wu', troops: 22, level: 1 },
+          { id: 13, cn: '吴郡', en: 'Wujun', x: 0.85, y: 0.56, owner: 'wu', troops: 20, level: 1 }
+        ],
+        edges: [
+          [0, 1], [0, 2], [0, 8],
+          [1, 3], [1, 7],
+          [2, 8], [2, 12],
+          [3, 4], [3, 7],
+          [4, 5], [4, 7],
+          [5, 6], [5, 7],
+          [6, 7], [6, 10],
+          [7, 8], [7, 9], [7, 10],
+          [8, 9], [8, 12],
+          [9, 10], [9, 11], [9, 12],
+          [10, 11], [10, 13],
+          [11, 12], [11, 13]
+        ]
+      },
+      {
+        title: 'Stage III: Central Plains Hegemony (中原逐鹿)',
+        aiThinkInterval: 1.75,
+        nodes: [
+          { id: 0, cn: '西凉', en: 'Xiliang', x: 0.14, y: 0.22, owner: 'shu', troops: 35, level: 1 },
+          { id: 1, cn: '成都', en: 'Chengdu', x: 0.16, y: 0.76, owner: 'shu', troops: 45, level: 2 },
+          { id: 2, cn: '天水', en: 'Tianshui', x: 0.26, y: 0.42, owner: 'neutral', troops: 15, level: 1 },
+          { id: 3, cn: '汉中', en: 'Hanzhong', x: 0.28, y: 0.60, owner: 'neutral', troops: 16, level: 1 },
+          { id: 4, cn: '永安', en: 'Yong’an', x: 0.36, y: 0.82, owner: 'neutral', troops: 14, level: 1 },
+          { id: 5, cn: '长安', en: 'Chang’an', x: 0.40, y: 0.32, owner: 'neutral', troops: 20, level: 1 },
+          { id: 6, cn: '洛阳', en: 'Luoyang', x: 0.52, y: 0.48, owner: 'neutral', troops: 32, level: 2 },
+          { id: 7, cn: '襄阳', en: 'Xiangyang', x: 0.50, y: 0.68, owner: 'neutral', troops: 18, level: 1 },
+          { id: 8, cn: '长沙', en: 'Changsha', x: 0.56, y: 0.86, owner: 'wu', troops: 35, level: 1 },
+          { id: 9, cn: '邺城', en: 'Yecheng', x: 0.58, y: 0.20, owner: 'wei', troops: 45, level: 2 },
+          { id: 10, cn: '北平', en: 'Beiping', x: 0.82, y: 0.18, owner: 'wei', troops: 38, level: 1 },
+          { id: 11, cn: '许昌', en: 'Xuchang', x: 0.68, y: 0.44, owner: 'neutral', troops: 20, level: 1 },
+          { id: 12, cn: '徐州', en: 'Xuzhou', x: 0.82, y: 0.40, owner: 'neutral', troops: 18, level: 1 },
+          { id: 13, cn: '寿春', en: 'Shouchun', x: 0.72, y: 0.64, owner: 'neutral', troops: 18, level: 1 },
+          { id: 14, cn: '建业', en: 'Jianye', x: 0.84, y: 0.80, owner: 'wu', troops: 48, level: 2 }
+        ],
+        edges: [
+          [0, 2], [0, 5],
+          [1, 3], [1, 4],
+          [2, 3], [2, 5],
+          [3, 4], [3, 5], [3, 7],
+          [4, 7], [4, 8],
+          [5, 6], [5, 9],
+          [6, 7], [6, 9], [6, 11],
+          [7, 8], [7, 11], [7, 13],
+          [8, 13], [8, 14],
+          [9, 10], [9, 11], [9, 12],
+          [10, 12],
+          [11, 12], [11, 13],
+          [12, 13], [12, 14],
+          [13, 14]
+        ]
+      }
+    ];
+
+    // --- 4. GAME STATE ---
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let width = window.innerWidth;
+    let height = window.innerHeight;
+    let dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+    const state = {
+      stageIndex: 0,
+      difficulty: 'casual',
+      nodes: [],
+      edges: [],
+      adjacency: {},
+      armies: [],       // Marching troop groups
+      particles: [],    // Visual effects
+      floatingTexts: [],
+      selectedIds: new Set(),
+      dispatchPercent: 0.5,
+      gameSpeed: 1,
+      paused: false,
+      gameOver: false,
+      elapsedTime: 0,
+      stats: {
+        troopsSent: 0,
+        captures: 0
+      },
+      // Pointer / Drag interaction state
+      pointer: {
+        isDown: false,
+        startX: 0,
+        startY: 0,
+        currX: 0,
+        currY: 0,
+        dragSourceIds: new Set(),
+        hoverNodeId: null
+      },
+      aiTimer: 0,
+      riverPoints: []
+    };
+
+    // --- 5. INITIALIZATION & RESIZE ---
+    function resizeCanvas() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      generateDecorativeTerrain();
+    }
+
+    function generateDecorativeTerrain() {
+      // Subtle winding river across the map for visual richness
+      state.riverPoints = [];
+      const steps = 16;
+      for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        const rx = width * (0.05 + t * 0.9);
+        const ry = height * (0.62 + Math.sin(t * Math.PI * 2.2) * 0.12);
+        state.riverPoints.push({ x: rx, y: ry });
+      }
+    }
+
+    function loadStage(index) {
+      state.stageIndex = index;
+      const stageData = STAGES[index];
+      const diff = DIFFICULTY_SETTINGS[state.difficulty] || DIFFICULTY_SETTINGS.casual;
+
+      state.nodes = stageData.nodes.map(n => {
+        let adjustedTroops = n.troops;
+        if (n.owner === 'shu') {
+          adjustedTroops = n.troops + diff.playerStartBonus;
+        } else if (n.owner === 'neutral') {
+          adjustedTroops = Math.max(3, Math.round(n.troops * diff.neutralMult));
+        } else {
+          adjustedTroops = Math.max(8, Math.round(n.troops * diff.aiStartMult));
+        }
+        return {
+          ...n,
+          troops: adjustedTroops,
+          regenAccum: 0,
+          pulseAnim: 0,
+          captureAnim: 0
+        };
+      });
+      state.edges = stageData.edges.map(e => [...e]);
+      state.adjacency = {};
+      state.nodes.forEach(n => { state.adjacency[n.id] = []; });
+      state.edges.forEach(([a, b]) => {
+        state.adjacency[a].push(b);
+        state.adjacency[b].push(a);
+      });
+
+      state.armies = [];
+      state.particles = [];
+      state.floatingTexts = [];
+      state.selectedIds.clear();
+      state.pointer.isDown = false;
+      state.pointer.dragSourceIds.clear();
+      state.pointer.hoverNodeId = null;
+      state.gameOver = false;
+      state.paused = false;
+      state.elapsedTime = 0;
+      state.aiTimer = 0.8;
+      state.stats = { troopsSent: 0, captures: 0 };
+
+      document.getElementById('btnPause').textContent = '⏸';
+      document.getElementById('endGameModal').classList.add('hidden');
+      updateSelectionUI();
+      updateTopStatsUI();
+    }
+
+    // Helper: Convert normalized node coords into safe screen coords (avoiding top/bottom HUD)
+    function getNodeScreenPos(node) {
+      const topPad = width < 640 ? 96 : 84;
+      const botPad = width < 640 ? 115 : 105;
+      const sidePad = width < 640 ? 38 : 65;
+      const usableW = Math.max(200, width - sidePad * 2);
+      const usableH = Math.max(200, height - topPad - botPad);
+      return {
+        x: sidePad + node.x * usableW,
+        y: topPad + node.y * usableH
+      };
+    }
+
+    function getNodeRadius(node) {
+      const base = Math.min(width, height) * 0.036;
+      const clamped = Math.max(20, Math.min(32, base));
+      return clamped * STAR_CONFIG[node.level].scale;
+    }
+
+    // --- 6. PATHFINDING (BFS for multi-hop troop dispatch) ---
+    function findShortestPath(startId, targetId) {
+      if (startId === targetId) return [startId];
+      const queue = [[startId]];
+      const visited = new Set([startId]);
+      while (queue.length > 0) {
+        const path = queue.shift();
+        const curr = path[path.length - 1];
+        const neighbors = state.adjacency[curr] || [];
+        for (const next of neighbors) {
+          if (next === targetId) {
+            return [...path, next];
+          }
+          if (!visited.has(next)) {
+            visited.add(next);
+            queue.push([...path, next]);
+          }
+        }
+      }
+      return null;
+    }
+
+    // --- 7. TROOP DISPATCH & UPGRADE LOGIC ---
+    function dispatchTroops(fromId, toId, fraction = state.dispatchPercent) {
+      const source = state.nodes[fromId];
+      const target = state.nodes[toId];
+      if (!source || !target || fromId === toId) return false;
+      if (source.owner === 'neutral') return false;
+
+      const sendCount = Math.floor(source.troops * fraction);
+      if (sendCount < 1) return false;
+
+      const path = findShortestPath(fromId, toId);
+      if (!path || path.length < 2) return false;
+
+      source.troops -= sendCount;
+      source.pulseAnim = 1.0;
+
+      if (source.owner === 'shu') {
+        state.stats.troopsSent += sendCount;
+      }
+
+      // Spawn marching army battalion along path[0] -> path[1], carrying full path
+      state.armies.push({
+        owner: source.owner,
+        count: sendCount,
+        path: path,
+        legIndex: 0,
+        progress: 0,
+        speed: 135, // pixels per second
+        wobblePhase: Math.random() * Math.PI * 2
+      });
+
+      return true;
+    }
+
+    function upgradeCity(nodeId) {
+      const node = state.nodes[nodeId];
+      if (!node || node.owner !== 'shu') return;
+      const cfg = STAR_CONFIG[node.level];
+      if (!cfg.upgradeCost) {
+        showToast(`${node.cn} is already at Max Level (★★★)!`);
+        return;
+      }
+      if (node.troops < cfg.upgradeCost) {
+        showToast(`Need ${cfg.upgradeCost} troops to upgrade ${node.cn}!`);
+        return;
+      }
+
+      node.troops -= cfg.upgradeCost;
+      node.level += 1;
+      node.captureAnim = 1.0;
+      sfx.playUpgrade();
+
+      const pos = getNodeScreenPos(node);
+      spawnParticles(pos.x, pos.y, '#fde047', 22);
+      spawnFloatingText(pos.x, pos.y - 28, `★ UPGRADE! Lv.${node.level}`, '#fde047');
+      showToast(`${node.cn} (${node.en}) upgraded to ${'★'.repeat(node.level)}!`);
+      updateSelectionUI();
+    }
+
+    // --- 8. SMART AI OPPONENT CONTROLLER ---
+    function updateAI(dt) {
+      const diff = DIFFICULTY_SETTINGS[state.difficulty] || DIFFICULTY_SETTINGS.casual;
+      state.aiTimer -= dt;
+      if (state.aiTimer > 0) return;
+      state.aiTimer = STAGES[state.stageIndex].aiThinkInterval * diff.aiThinkMult * (0.85 + Math.random() * 0.3);
+
+      const aiFactions = ['wei', 'wu'];
+      aiFactions.forEach(faction => {
+        const myCities = state.nodes.filter(n => n.owner === faction);
+        if (myCities.length === 0) return;
+
+        // 1. Consider upgrading a safe hub city if rich in troops
+        for (const city of myCities) {
+          const cfg = STAR_CONFIG[city.level];
+          if (cfg.upgradeCost && city.troops >= cfg.upgradeCost + 22 && Math.random() < diff.aiUpgradeChance) {
+            city.troops -= cfg.upgradeCost;
+            city.level += 1;
+            city.captureAnim = 1.0;
+            const pos = getNodeScreenPos(city);
+            spawnParticles(pos.x, pos.y, FACTIONS[faction].secondary, 14);
+            return;
+          }
+        }
+
+        // 2. Evaluate best attack or reinforcement move
+        let bestMove = null;
+        let bestScore = -999;
+
+        myCities.forEach(src => {
+          if (src.troops < 10) return;
+          const neighbors = state.adjacency[src.id] || [];
+          neighbors.forEach(nbId => {
+            const dst = state.nodes[nbId];
+            const available = Math.floor(src.troops * 0.65);
+
+            if (dst.owner !== faction) {
+              // Attack neutral or enemy city
+              const effectiveDef = dst.troops * STAR_CONFIG[dst.level].defense;
+              if (available > effectiveDef + 2) {
+                let score = (available - effectiveDef) * 1.5;
+                if (dst.owner === 'neutral') score += 18;
+                if (dst.owner === 'shu') score += 12;
+                score += dst.level * 10;
+                if (score > bestScore) {
+                  bestScore = score;
+                  bestMove = { from: src.id, to: dst.id, pct: 0.75 };
+                }
+              }
+            } else {
+              // Reinforce frontline ally city that has enemy neighbors and fewer troops
+              const dstHasEnemyNeighbor = (state.adjacency[dst.id] || []).some(
+                x => state.nodes[x].owner !== faction
+              );
+              const srcHasEnemyNeighbor = neighbors.some(
+                x => state.nodes[x].owner !== faction
+              );
+              if (!srcHasEnemyNeighbor && dstHasEnemyNeighbor && src.troops > dst.troops + 15) {
+                const score = (src.troops - dst.troops) * 0.8;
+                if (score > bestScore) {
+                  bestScore = score;
+                  bestMove = { from: src.id, to: dst.id, pct: 0.6 };
+                }
+              }
+            }
+          });
+        });
+
+        if (bestMove) {
+          dispatchTroops(bestMove.from, bestMove.to, bestMove.pct);
+        }
+      });
+    }
+
+    // --- 9. SIMULATION UPDATE LOOP ---
+    function updateSimulation(rawDt) {
+      if (state.paused || state.gameOver) return;
+      const dt = rawDt * state.gameSpeed;
+      const diff = DIFFICULTY_SETTINGS[state.difficulty] || DIFFICULTY_SETTINGS.casual;
+      state.elapsedTime += dt;
+
+      // 1. City Troop Regeneration & Animations
+      state.nodes.forEach(node => {
+        if (node.pulseAnim > 0) node.pulseAnim = Math.max(0, node.pulseAnim - dt * 2.5);
+        if (node.captureAnim > 0) node.captureAnim = Math.max(0, node.captureAnim - dt * 1.8);
+
+        if (node.owner !== 'neutral') {
+          const cfg = STAR_CONFIG[node.level];
+          const factionRegenMult = node.owner === 'shu' ? 1.0 : diff.aiRegenMult;
+          if (node.troops < cfg.maxTroops) {
+            node.regenAccum += cfg.regenRate * factionRegenMult * dt;
+            if (node.regenAccum >= 1) {
+              const add = Math.floor(node.regenAccum);
+              node.troops = Math.min(cfg.maxTroops, node.troops + add);
+              node.regenAccum -= add;
+            }
+          }
+        }
+      });
+
+      // 2. Update Marching Armies
+      for (let i = state.armies.length - 1; i >= 0; i--) {
+        const army = state.armies[i];
+        const fromNode = state.nodes[army.path[army.legIndex]];
+        const toNode = state.nodes[army.path[army.legIndex + 1]];
+
+        if (!fromNode || !toNode) {
+          state.armies.splice(i, 1);
+          continue;
+        }
+
+        const p1 = getNodeScreenPos(fromNode);
+        const p2 = getNodeScreenPos(toNode);
+        const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y) || 1;
+
+        army.progress += (army.speed * dt) / dist;
+        army.wobblePhase += dt * 12;
+
+        // Check mid-road head-on collision with opposing armies on the same edge
+        let annihilated = false;
+        for (let j = i - 1; j >= 0; j--) {
+          const other = state.armies[j];
+          if (other.owner === army.owner) continue;
+          const oFrom = other.path[other.legIndex];
+          const oTo = other.path[other.legIndex + 1];
+          if (oFrom === toNode.id && oTo === fromNode.id) {
+            // Moving in opposite directions along same edge
+            if (army.progress + other.progress >= 0.94) {
+              const clashPos = {
+                x: p1.x + (p2.x - p1.x) * army.progress,
+                y: p1.y + (p2.y - p1.y) * army.progress
+              };
+              spawnParticles(clashPos.x, clashPos.y, '#fbbf24', 12);
+              sfx.playClash();
+
+              if (army.count > other.count) {
+                army.count -= other.count;
+                state.armies.splice(j, 1);
+                i--;
+              } else if (other.count > army.count) {
+                other.count -= army.count;
+                state.armies.splice(i, 1);
+                annihilated = true;
+                break;
+              } else {
+                state.armies.splice(i, 1);
+                state.armies.splice(j, 1);
+                i--;
+                annihilated = true;
+                break;
+              }
+            }
+          }
+        }
+        if (annihilated) continue;
+
+        // Arrived at next node along path
+        if (army.progress >= 1) {
+          const isFinalDest = army.legIndex + 1 >= army.path.length - 1;
+
+          if (toNode.owner === army.owner) {
+            // Friendly node: if final destination, reinforce; otherwise continue marching!
+            if (isFinalDest) {
+              const maxCap = STAR_CONFIG[toNode.level].maxTroops;
+              toNode.troops = Math.min(maxCap + 50, toNode.troops + army.count);
+              toNode.pulseAnim = 0.7;
+              state.armies.splice(i, 1);
+            } else {
+              army.legIndex += 1;
+              army.progress = 0;
+            }
+          } else {
+            // Hostile or neutral node: resolve combat!
+            resolveArrivalCombat(army, toNode);
+            if (army.count <= 0) {
+              state.armies.splice(i, 1);
+            } else if (isFinalDest) {
+              state.armies.splice(i, 1);
+            } else {
+              // Captured intermediate node and still has troops to keep marching!
+              army.legIndex += 1;
+              army.progress = 0;
+            }
+          }
+        }
+      }
+
+      // 3. AI Update
+      updateAI(dt);
+
+      // 4. Particles & Floating Texts
+      for (let i = state.particles.length - 1; i >= 0; i--) {
+        const p = state.particles[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.life -= dt;
+        if (p.life <= 0) state.particles.splice(i, 1);
+      }
+      for (let i = state.floatingTexts.length - 1; i >= 0; i--) {
+        const ft = state.floatingTexts[i];
+        ft.y -= 26 * dt;
+        ft.life -= dt;
+        if (ft.life <= 0) state.floatingTexts.splice(i, 1);
+      }
+
+      // 5. Update HUD & Check Victory / Defeat
+      updateTopStatsUI();
+      if (state.selectedIds.size > 0) updateSelectionUI();
+      checkVictoryCondition();
+    }
+
+    function resolveArrivalCombat(army, node) {
+      const pos = getNodeScreenPos(node);
+      const defMult = STAR_CONFIG[node.level].defense;
+      const effectiveDefense = node.troops * defMult;
+
+      spawnParticles(pos.x, pos.y, FACTIONS[army.owner].secondary, 14);
+
+      if (army.count > effectiveDefense) {
+        // City Captured!
+        const remaining = Math.max(1, Math.round(army.count - effectiveDefense));
+        const prevOwner = node.owner;
+        node.owner = army.owner;
+        node.troops = remaining;
+        node.captureAnim = 1.0;
+
+        if (prevOwner === 'shu') {
+          state.selectedIds.delete(node.id);
+          updateSelectionUI();
+        }
+        if (army.owner === 'shu') {
+          state.stats.captures += 1;
+          sfx.playCapture(true);
+          spawnFloatingText(pos.x, pos.y - 25, `CAPTURED ${node.cn}!`, '#38bdf8');
+        } else if (prevOwner === 'shu') {
+          sfx.playCapture(false);
+          spawnFloatingText(pos.x, pos.y - 25, `LOST ${node.cn}!`, '#f87171');
+        } else {
+          sfx.playClash();
+        }
+
+        // If this was the final destination, the remaining troops stay as garrison (already assigned)
+        // If multi-hop continues, leave 2 troops behind to hold the captured city
+        if (army.legIndex + 1 < army.path.length - 1 && remaining > 3) {
+          node.troops = 2;
+          army.count = remaining - 2;
+        } else {
+          army.count = 0;
+        }
+      } else {
+        // Defenders hold!
+        const lostDefenders = Math.ceil(army.count / defMult);
+        node.troops = Math.max(0, node.troops - lostDefenders);
+        node.pulseAnim = 0.8;
+        army.count = 0;
+        sfx.playClash();
+        spawnFloatingText(pos.x, pos.y - 20, `-${lostDefenders}`, '#fca5a5');
+      }
+    }
+
+    function checkVictoryCondition() {
+      const shuCities = state.nodes.filter(n => n.owner === 'shu').length;
+      const shuArmies = state.armies.filter(a => a.owner === 'shu').length;
+      const enemyCities = state.nodes.filter(n => n.owner === 'wei' || n.owner === 'wu').length;
+      const enemyArmies = state.armies.filter(a => a.owner === 'wei' || a.owner === 'wu').length;
+
+      if (enemyCities === 0 && enemyArmies === 0) {
+        triggerEndGame(true);
+      } else if (shuCities === 0 && shuArmies === 0) {
+        triggerEndGame(false);
+      }
+    }
+
+    function triggerEndGame(isVictory) {
+      state.gameOver = true;
+      const modal = document.getElementById('endGameModal');
+      const title = document.getElementById('endGameTitle');
+      const sub = document.getElementById('endGameSubtitle');
+      const badge = document.getElementById('endGameBadge');
+      const nextBtn = document.getElementById('btnNextStage');
+
+      const mins = Math.floor(state.elapsedTime / 60).toString().padStart(2, '0');
+      const secs = Math.floor(state.elapsedTime % 60).toString().padStart(2, '0');
+      document.getElementById('statTime').textContent = `${mins}:${secs}`;
+      document.getElementById('statTroops').textContent = state.stats.troopsSent;
+      document.getElementById('statCaptures').textContent = state.stats.captures;
+
+      if (isVictory) {
+        sfx.playVictory();
+        badge.textContent = 'Realm Unified';
+        badge.className = 'inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest mb-2 bg-amber-500/20 text-amber-300 border border-amber-500/40';
+        title.textContent = '一统天下 • VICTORY';
+        title.className = 'font-cn text-2xl sm:text-3xl font-black text-amber-400 mb-1';
+        sub.textContent = 'Your banners fly high across every citadel of the Three Kingdoms!';
+        nextBtn.classList.remove('hidden');
+      } else {
+        sfx.playDefeat();
+        badge.textContent = 'Campaign Fallen';
+        badge.className = 'inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest mb-2 bg-rose-500/20 text-rose-300 border border-rose-500/40';
+        title.textContent = '兵败垂成 • DEFEAT';
+        title.className = 'font-cn text-2xl sm:text-3xl font-black text-rose-400 mb-1';
+        sub.textContent = 'Your last stronghold has fallen. Regroup and strike back!';
+        nextBtn.classList.add('hidden');
+      }
+
+      modal.classList.remove('hidden');
+    }
+
+    // --- 10. VISUAL EFFECTS HELPERS ---
+    function spawnParticles(x, y, color, count = 12) {
+      for (let i = 0; i < count; i++) {
+        const angle = (Math.PI * 2 * i) / count + Math.random() * 0.4;
+        const speed = 40 + Math.random() * 95;
+        state.particles.push({
+          x, y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          size: 2.5 + Math.random() * 3,
+          color,
+          life: 0.45 + Math.random() * 0.25,
+          maxLife: 0.7
+        });
+      }
+    }
+
+    function spawnFloatingText(x, y, text, color) {
+      state.floatingTexts.push({
+        x, y, text, color,
+        life: 1.15,
+        maxLife: 1.15
+      });
+    }
+
+    let toastTimeout = null;
+    function showToast(msg) {
+      const banner = document.getElementById('toastBanner');
+      document.getElementById('toastText').textContent = msg;
+      banner.style.opacity = '1';
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        banner.style.opacity = '0';
+      }, 2000);
+    }
+
+    // --- 11. RENDERING PIPELINE (HTML5 CANVAS) ---
+    function render() {
+      ctx.clearRect(0, 0, width, height);
+
+      // 1. Rich Three Kingdoms Grassland / Parchment Map Background
+      drawMapBackground();
+
+      // 2. Connecting Road Paths & Directional Flow Arrows
+      drawRoads();
+
+      // 3. Active Drag-to-Dispatch Targeting Lines
+      drawDragTargeting();
+
+      // 4. Marching Soldier Battalions
+      drawMarchingArmies();
+
+      // 5. Ancient Chinese Citadel / Pagoda Nodes
+      drawCityNodes();
+
+      // 6. Combat Particles & Floating Text
+      drawEffects();
+    }
+
+    function drawMapBackground() {
+      // Warm olive-emerald terrain gradient inspired by classic Three Kingdoms strategy maps
+      const bgGrad = ctx.createRadialGradient(
+        width * 0.5, height * 0.5, width * 0.1,
+        width * 0.5, height * 0.5, Math.max(width, height) * 0.75
+      );
+      bgGrad.addColorStop(0, '#6a8239');
+      bgGrad.addColorStop(0.55, '#556b2f');
+      bgGrad.addColorStop(1, '#36461d');
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, width, height);
+
+      // Subtle topographic contour rings
+      ctx.save();
+      ctx.strokeStyle = 'rgba(235, 220, 175, 0.08)';
+      ctx.lineWidth = 1.5;
+      const contours = [
+        { x: 0.25, y: 0.3, r: 160 },
+        { x: 0.75, y: 0.7, r: 210 },
+        { x: 0.52, y: 0.48, r: 290 }
+      ];
+      contours.forEach(c => {
+        ctx.beginPath();
+        ctx.ellipse(width * c.x, height * c.y, c.r * 1.3, c.r * 0.85, 0.2, 0, Math.PI * 2);
+        ctx.stroke();
+      });
+
+      // Decorative winding Yangtze / Han River
+      if (state.riverPoints.length > 1) {
+        ctx.beginPath();
+        ctx.moveTo(state.riverPoints[0].x, state.riverPoints[0].y);
+        for (let i = 1; i < state.riverPoints.length; i++) {
+          ctx.lineTo(state.riverPoints[i].x, state.riverPoints[i].y);
+        }
+        ctx.strokeStyle = 'rgba(186, 165, 115, 0.35)';
+        ctx.lineWidth = 24;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+
+        ctx.strokeStyle = 'rgba(56, 130, 168, 0.36)';
+        ctx.lineWidth = 16;
+        ctx.stroke();
+      }
+
+      // Subtle decorative map grid lines
+      ctx.strokeStyle = 'rgba(255, 248, 220, 0.04)';
+      ctx.lineWidth = 1;
+      const step = 70;
+      for (let x = 0; x < width; x += step) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height);
+        ctx.stroke();
+      }
+      for (let y = 0; y < height; y += step) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawRoads() {
+      const timeOffset = (performance.now() * 0.03) % 24;
+
+      state.edges.forEach(([aId, bId]) => {
+        const nodeA = state.nodes[aId];
+        const nodeB = state.nodes[bId];
+        const p1 = getNodeScreenPos(nodeA);
+        const p2 = getNodeScreenPos(nodeB);
+
+        const isConnectedToSelected =
+          state.selectedIds.has(aId) || state.selectedIds.has(bId);
+
+        // Outer dirt road border
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.strokeStyle = 'rgba(66, 50, 28, 0.65)';
+        ctx.lineWidth = isConnectedToSelected ? 11 : 8;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+
+        // Inner warm parchment road core
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.strokeStyle = isConnectedToSelected ? '#e8cf96' : '#c8b07b';
+        ctx.lineWidth = isConnectedToSelected ? 6 : 4;
+        ctx.stroke();
+
+        // Animated flow chevrons if connected to a selected player city
+        if (isConnectedToSelected) {
+          const fromSelected = state.selectedIds.has(aId) ? p1 : p2;
+          const toTarget = state.selectedIds.has(aId) ? p2 : p1;
+          const angle = Math.atan2(toTarget.y - fromSelected.y, toTarget.x - fromSelected.x);
+          const dist = Math.hypot(toTarget.x - fromSelected.x, toTarget.y - fromSelected.y);
+
+          ctx.save();
+          ctx.strokeStyle = 'rgba(255, 243, 196, 0.85)';
+          ctx.lineWidth = 2;
+          for (let d = 34 + timeOffset; d < dist - 34; d += 24) {
+            const cx = fromSelected.x + Math.cos(angle) * d;
+            const cy = fromSelected.y + Math.sin(angle) * d;
+            ctx.beginPath();
+            ctx.moveTo(cx - Math.cos(angle - 0.5) * 6, cy - Math.sin(angle - 0.5) * 6);
+            ctx.lineTo(cx, cy);
+            ctx.lineTo(cx - Math.cos(angle + 0.5) * 6, cy - Math.sin(angle + 0.5) * 6);
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
+      });
+    }
+
+    function drawDragTargeting() {
+      if (!state.pointer.isDown || state.pointer.dragSourceIds.size === 0) return;
+
+      const hoverNode =
+        state.pointer.hoverNodeId !== null ? state.nodes[state.pointer.hoverNodeId] : null;
+      const targetPos = hoverNode
+        ? getNodeScreenPos(hoverNode)
+        : { x: state.pointer.currX, y: state.pointer.currY };
+
+      state.pointer.dragSourceIds.forEach(srcId => {
+        const srcNode = state.nodes[srcId];
+        if (!srcNode || srcNode.owner !== 'shu') return;
+        const srcPos = getNodeScreenPos(srcNode);
+
+        // Glowing targeting line
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(srcPos.x, srcPos.y);
+        ctx.lineTo(targetPos.x, targetPos.y);
+        ctx.strokeStyle = hoverNode ? '#fde047' : 'rgba(56, 189, 248, 0.85)';
+        ctx.lineWidth = 4;
+        ctx.setLineDash([10, 6]);
+        ctx.lineDashOffset = -(performance.now() * 0.06);
+        ctx.stroke();
+
+        // Arrowhead at target
+        const angle = Math.atan2(targetPos.y - srcPos.y, targetPos.x - srcPos.x);
+        ctx.setLineDash([]);
+        ctx.fillStyle = hoverNode ? '#fde047' : '#38bdf8';
+        ctx.beginPath();
+        ctx.moveTo(targetPos.x, targetPos.y);
+        ctx.lineTo(
+          targetPos.x - Math.cos(angle - 0.4) * 14,
+          targetPos.y - Math.sin(angle - 0.4) * 14
+        );
+        ctx.lineTo(
+          targetPos.x - Math.cos(angle + 0.4) * 14,
+          targetPos.y - Math.sin(angle + 0.4) * 14
+        );
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      });
+
+      // Highlight ring around hovered target city
+      if (hoverNode) {
+        const r = getNodeRadius(hoverNode) + 8;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(targetPos.x, targetPos.y, r, 0, Math.PI * 2);
+        ctx.strokeStyle = '#fde047';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    function drawMarchingArmies() {
+      state.armies.forEach(army => {
+        const fromNode = state.nodes[army.path[army.legIndex]];
+        const toNode = state.nodes[army.path[army.legIndex + 1]];
+        if (!fromNode || !toNode) return;
+
+        const p1 = getNodeScreenPos(fromNode);
+        const p2 = getNodeScreenPos(toNode);
+        const x = p1.x + (p2.x - p1.x) * army.progress;
+        const y = p1.y + (p2.y - p1.y) * army.progress;
+        const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+        const faction = FACTIONS[army.owner];
+
+        ctx.save();
+        ctx.translate(x, y);
+
+        // Render mini squad formation (1 to 3 soldiers based on troop count)
+        const soldierCount = army.count >= 25 ? 3 : army.count >= 8 ? 2 : 1;
+        const offsets =
+          soldierCount === 3
+            ? [{ ox: 5, oy: 0 }, { ox: -5, oy: -5 }, { ox: -5, oy: 5 }]
+            : soldierCount === 2
+            ? [{ ox: 0, oy: -4 }, { ox: 0, oy: 4 }]
+            : [{ ox: 0, oy: 0 }];
+
+        offsets.forEach((off, idx) => {
+          const bounce = Math.sin(army.wobblePhase + idx * 1.5) * 2;
+          ctx.save();
+          ctx.translate(off.ox, off.oy + bounce);
+
+          // Shadow
+          ctx.fillStyle = 'rgba(0,0,0,0.35)';
+          ctx.beginPath();
+          ctx.ellipse(0, 6, 6, 3, 0, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Soldier armor body
+          ctx.fillStyle = faction.primary;
+          ctx.strokeStyle = '#1c1917';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(0, 0, 6.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+
+          // Helmet crest
+          ctx.fillStyle = '#fde047';
+          ctx.beginPath();
+          ctx.arc(0, -3, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Spear / Bow direction indicator
+          ctx.strokeStyle = '#f5f5f4';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.lineTo(Math.cos(angle) * 10, Math.sin(angle) * 10);
+          ctx.stroke();
+
+          ctx.restore();
+        });
+
+        // Troop count pill badge above squad
+        const label = `${army.count}`;
+        ctx.font = 'bold 11px Inter, sans-serif';
+        const tw = ctx.measureText(label).width;
+        const bw = tw + 10;
+        const bh = 16;
+
+        ctx.fillStyle = faction.badgeBg;
+        ctx.strokeStyle = '#fde047';
+        ctx.lineWidth = 1;
+        roundRect(ctx, -bw / 2, -23, bw, bh, 6);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, 0, -15);
+
+        ctx.restore();
+      });
+    }
+
+    function drawCityNodes() {
+      state.nodes.forEach(node => {
+        const pos = getNodeScreenPos(node);
+        const baseR = getNodeRadius(node);
+        const faction = FACTIONS[node.owner];
+        const isSelected = state.selectedIds.has(node.id);
+        const pulseScale = 1 + node.pulseAnim * 0.14 + node.captureAnim * 0.2;
+
+        ctx.save();
+        ctx.translate(pos.x, pos.y);
+
+        // 1. Selection Aura Ring
+        if (isSelected) {
+          const rot = performance.now() * 0.002;
+          ctx.save();
+          ctx.rotate(rot);
+          ctx.beginPath();
+          ctx.arc(0, 0, baseR + 10, 0, Math.PI * 2);
+          ctx.strokeStyle = '#fde047';
+          ctx.lineWidth = 3;
+          ctx.setLineDash([8, 6]);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // 2. Faction Territory Ground Halo
+        const halo = ctx.createRadialGradient(0, 2, baseR * 0.3, 0, 2, baseR * 1.35);
+        halo.addColorStop(0, faction.glow);
+        halo.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = halo;
+        ctx.beginPath();
+        ctx.arc(0, 2, baseR * 1.35, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Scale fortress graphics with pulse
+        ctx.save();
+        ctx.scale(pulseScale, pulseScale);
+
+        // 3. Stone Citadel Base / Walls
+        const wallW = baseR * 1.65;
+        const wallH = baseR * 0.72;
+        ctx.fillStyle = '#57534e';
+        ctx.strokeStyle = '#1c1917';
+        ctx.lineWidth = 2;
+        roundRect(ctx, -wallW / 2, -2, wallW, wallH, 4);
+        ctx.fill();
+        ctx.stroke();
+
+        // Side watchtowers for Level 2 & 3 cities
+        if (node.level >= 2) {
+          ctx.fillStyle = '#44403c';
+          ctx.fillRect(-wallW * 0.62, -6, 8, wallH + 3);
+          ctx.strokeRect(-wallW * 0.62, -6, 8, wallH + 3);
+          ctx.fillRect(wallW * 0.62 - 8, -6, 8, wallH + 3);
+          ctx.strokeRect(wallW * 0.62 - 8, -6, 8, wallH + 3);
+        }
+
+        // Faction Banner Gate
+        ctx.fillStyle = faction.primary;
+        ctx.fillRect(-6, 2, 12, wallH - 4);
+
+        // 4. Sweeping Ancient Chinese Pagoda Roof(s)
+        drawPagodaRoof(ctx, 0, -2, wallW * 1.15, baseR * 0.55, faction.roof, faction.roofHighlight);
+        if (node.level >= 2) {
+          drawPagodaRoof(ctx, 0, -baseR * 0.42, wallW * 0.85, baseR * 0.45, faction.roof, faction.roofHighlight);
+        }
+        if (node.level >= 3) {
+          drawPagodaRoof(ctx, 0, -baseR * 0.78, wallW * 0.58, baseR * 0.38, '#f59e0b', '#fef08a');
+        }
+
+        ctx.restore();
+
+        // 5. Troop Count Badge Above Citadel
+        const countY = -baseR * (node.level === 3 ? 1.38 : node.level === 2 ? 1.18 : 1.0);
+        const countStr = `${Math.floor(node.troops)}`;
+        ctx.font = '800 13px Inter, sans-serif';
+        const cWidth = Math.max(28, ctx.measureText(countStr).width + 14);
+
+        ctx.fillStyle = faction.badgeBg;
+        ctx.strokeStyle = isSelected ? '#fde047' : '#1c1917';
+        ctx.lineWidth = 2;
+        roundRect(ctx, -cWidth / 2, countY - 11, cWidth, 21, 10);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = faction.text;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(countStr, 0, countY);
+
+        // Upgrade Ready Indicator (+ icon if player has enough troops)
+        const upgCost = STAR_CONFIG[node.level].upgradeCost;
+        if (node.owner === 'shu' && upgCost && node.troops >= upgCost) {
+          ctx.fillStyle = '#fde047';
+          ctx.beginPath();
+          ctx.arc(cWidth / 2 + 4, countY - 6, 6.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#1c1917';
+          ctx.font = '900 10px Inter, sans-serif';
+          ctx.fillText('↑', cWidth / 2 + 4, countY - 6);
+        }
+
+        // 6. City Name Banner & Star Rating Below Citadel
+        const nameY = baseR * 0.88;
+        ctx.font = '700 12px "Noto Serif SC", serif';
+        const nameW = ctx.measureText(node.cn).width + 14;
+
+        ctx.fillStyle = 'rgba(24, 19, 14, 0.82)';
+        roundRect(ctx, -nameW / 2, nameY - 8, nameW, 17, 5);
+        ctx.fill();
+
+        ctx.fillStyle = '#fef3c7';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(node.cn, 0, nameY + 0.5);
+
+        // Star Rating Icons underneath city name
+        const starY = nameY + 14;
+        const starsText = '★'.repeat(node.level) + '☆'.repeat(3 - node.level);
+        ctx.font = '10px sans-serif';
+        ctx.fillStyle = '#fbbf24';
+        ctx.fillText(starsText, 0, starY);
+
+        ctx.restore();
+      });
+    }
+
+    function drawPagodaRoof(ctx, cx, bottomY, spanW, roofH, mainColor, trimColor) {
+      ctx.save();
+      ctx.beginPath();
+      // Left upturned eave
+      ctx.moveTo(cx - spanW * 0.55, bottomY - roofH * 0.25);
+      ctx.quadraticCurveTo(cx - spanW * 0.25, bottomY, cx - spanW * 0.15, bottomY - roofH);
+      // Roof ridge
+      ctx.lineTo(cx + spanW * 0.15, bottomY - roofH);
+      // Right upturned eave
+      ctx.quadraticCurveTo(cx + spanW * 0.25, bottomY, cx + spanW * 0.55, bottomY - roofH * 0.25);
+      // Bottom eave line
+      ctx.quadraticCurveTo(cx, bottomY + 3, cx - spanW * 0.55, bottomY - roofH * 0.25);
+      ctx.closePath();
+
+      ctx.fillStyle = mainColor;
+      ctx.fill();
+      ctx.strokeStyle = '#1c1917';
+      ctx.lineWidth = 1.8;
+      ctx.stroke();
+
+      // Golden ridge highlight
+      ctx.beginPath();
+      ctx.moveTo(cx - spanW * 0.15, bottomY - roofH);
+      ctx.lineTo(cx + spanW * 0.15, bottomY - roofH);
+      ctx.strokeStyle = trimColor;
+      ctx.lineWidth = 2.2;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawEffects() {
+      // Particles
+      state.particles.forEach(p => {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+
+      // Floating Texts
+      state.floatingTexts.forEach(ft => {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, ft.life / ft.maxLife);
+        ctx.font = '800 13px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+        ctx.lineWidth = 3;
+        ctx.strokeText(ft.text, ft.x, ft.y);
+        ctx.fillStyle = ft.color;
+        ctx.fillText(ft.text, ft.x, ft.y);
+        ctx.restore();
+      });
+    }
+
+    function roundRect(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+    }
+
+    // --- 12. INPUT HANDLING (MOUSE & TOUCH DRAG-TO-DISPATCH + MULTI-SELECT) ---
+    function findNodeAt(x, y) {
+      for (let i = state.nodes.length - 1; i >= 0; i--) {
+        const node = state.nodes[i];
+        const pos = getNodeScreenPos(node);
+        const hitR = getNodeRadius(node) + 14; // Generous touch hit target
+        if (Math.hypot(x - pos.x, y - pos.y) <= hitR) {
+          return node;
+        }
+      }
+      return null;
+    }
+
+    function handlePointerDown(x, y) {
+      if (state.gameOver) return;
+      sfx.init();
+
+      const hitNode = findNodeAt(x, y);
+      state.pointer.isDown = true;
+      state.pointer.startX = x;
+      state.pointer.startY = y;
+      state.pointer.currX = x;
+      state.pointer.currY = y;
+      state.pointer.dragSourceIds.clear();
+
+      if (hitNode && hitNode.owner === 'shu') {
+        // Start dragging from an owned city
+        if (state.selectedIds.has(hitNode.id) && state.selectedIds.size > 1) {
+          // Keep existing multi-selection as drag sources
+          state.selectedIds.forEach(id => {
+            if (state.nodes[id].owner === 'shu') state.pointer.dragSourceIds.add(id);
+          });
+        } else {
+          state.selectedIds.clear();
+          state.selectedIds.add(hitNode.id);
+          state.pointer.dragSourceIds.add(hitNode.id);
+          sfx.playSelect();
+        }
+        updateSelectionUI();
+      } else if (hitNode && state.selectedIds.size > 0) {
+        // Tapped a target city while already having owned cities selected -> immediate dispatch!
+        let dispatchedAny = false;
+        state.selectedIds.forEach(srcId => {
+          if (dispatchTroops(srcId, hitNode.id, state.dispatchPercent)) {
+            dispatchedAny = true;
+          }
+        });
+        if (dispatchedAny) sfx.playMarch();
+        state.pointer.isDown = false;
+      } else {
+        // Tapped empty ground -> deselect
+        state.selectedIds.clear();
+        updateSelectionUI();
+      }
+    }
+
+    function handlePointerMove(x, y) {
+      if (!state.pointer.isDown) return;
+      state.pointer.currX = x;
+      state.pointer.currY = y;
+
+      const hitNode = findNodeAt(x, y);
+      state.pointer.hoverNodeId = hitNode ? hitNode.id : null;
+
+      // Multi-select sweep: if dragging across additional owned cities, add them to drag sources!
+      if (hitNode && hitNode.owner === 'shu' && state.pointer.dragSourceIds.size > 0) {
+        if (!state.pointer.dragSourceIds.has(hitNode.id)) {
+          state.pointer.dragSourceIds.add(hitNode.id);
+          state.selectedIds.add(hitNode.id);
+          sfx.playSelect();
+          updateSelectionUI();
+        }
+      }
+    }
+
+    function handlePointerUp(x, y) {
+      if (!state.pointer.isDown) return;
+      const hitNode = findNodeAt(x, y);
+
+      if (hitNode && state.pointer.dragSourceIds.size > 0) {
+        // Released over a target city -> dispatch from all dragged source cities!
+        let dispatchedAny = false;
+        state.pointer.dragSourceIds.forEach(srcId => {
+          if (srcId !== hitNode.id) {
+            if (dispatchTroops(srcId, hitNode.id, state.dispatchPercent)) {
+              dispatchedAny = true;
+            }
+          }
+        });
+        if (dispatchedAny) {
+          sfx.playMarch();
+        }
+      }
+
+      state.pointer.isDown = false;
+      state.pointer.dragSourceIds.clear();
+      state.pointer.hoverNodeId = null;
+    }
+
+    // Mouse Events
+    canvas.addEventListener('mousedown', e => {
+      if (e.button === 0) handlePointerDown(e.clientX, e.clientY);
+    });
+    window.addEventListener('mousemove', e => {
+      handlePointerMove(e.clientX, e.clientY);
+    });
+    window.addEventListener('mouseup', e => {
+      if (e.button === 0) handlePointerUp(e.clientX, e.clientY);
+    });
+
+    // Double-click owned city to quick-upgrade
+    canvas.addEventListener('dblclick', e => {
+      const hitNode = findNodeAt(e.clientX, e.clientY);
+      if (hitNode && hitNode.owner === 'shu') {
+        upgradeCity(hitNode.id);
+      }
+    });
+
+    // Touch Events
+    canvas.addEventListener('touchstart', e => {
+      if (e.touches.length > 0) {
+        const t = e.touches[0];
+        handlePointerDown(t.clientX, t.clientY);
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', e => {
+      e.preventDefault();
+      if (e.touches.length > 0) {
+        const t = e.touches[0];
+        handlePointerMove(t.clientX, t.clientY);
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', e => {
+      if (e.changedTouches.length > 0) {
+        const t = e.changedTouches[0];
+        handlePointerUp(t.clientX, t.clientY);
+      }
+    });
+
+    // --- 13. HUD & UI BINDINGS ---
+    function updateTopStatsUI() {
+      let shu = 0, wei = 0, wu = 0, neutral = 0;
+
+      state.nodes.forEach(n => {
+        if (n.owner === 'shu') shu += Math.floor(n.troops);
+        else if (n.owner === 'wei') wei += Math.floor(n.troops);
+        else if (n.owner === 'wu') wu += Math.floor(n.troops);
+        else neutral += Math.floor(n.troops);
+      });
+
+      state.armies.forEach(a => {
+        if (a.owner === 'shu') shu += a.count;
+        else if (a.owner === 'wei') wei += a.count;
+        else if (a.owner === 'wu') wu += a.count;
+      });
+
+      document.getElementById('shuStatLabel').innerHTML =
+        `<span class="inline-block w-2 h-2 rounded-full bg-sky-400"></span> SHU: ${shu}`;
+      document.getElementById('weiStatLabel').innerHTML =
+        `<span class="inline-block w-2 h-2 rounded-full bg-rose-400"></span> WEI: ${wei}`;
+
+      const wuLabel = document.getElementById('wuStatLabel');
+      const hasWu = state.nodes.some(n => n.owner === 'wu') || wu > 0;
+      if (hasWu) {
+        wuLabel.classList.remove('hidden');
+        wuLabel.classList.add('flex');
+        wuLabel.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-emerald-400"></span> WU: ${wu}`;
+      } else {
+        wuLabel.classList.add('hidden');
+        wuLabel.classList.remove('flex');
+      }
+
+      const total = Math.max(1, shu + wei + wu + neutral);
+      document.getElementById('barShu').style.width = `${(shu / total) * 100}%`;
+      document.getElementById('barWu').style.width = `${(wu / total) * 100}%`;
+      document.getElementById('barNeutral').style.width = `${(neutral / total) * 100}%`;
+      document.getElementById('barWei').style.width = `${(wei / total) * 100}%`;
+    }
+
+    function updateSelectionUI() {
+      const panel = document.getElementById('cityActionPanel');
+      const validIds = [...state.selectedIds].filter(
+        id => state.nodes[id] && state.nodes[id].owner === 'shu'
+      );
+
+      if (validIds.length === 0) {
+        panel.classList.add('hidden');
+        return;
+      }
+
+      panel.classList.remove('hidden');
+      const primaryNode = state.nodes[validIds[0]];
+      const cfg = STAR_CONFIG[primaryNode.level];
+
+      if (validIds.length === 1) {
+        document.getElementById('selectedCityName').textContent = `${primaryNode.cn} ${primaryNode.en}`;
+        document.getElementById('selectedCityStars').textContent =
+          '★'.repeat(primaryNode.level) + '☆'.repeat(3 - primaryNode.level);
+        document.getElementById('selectedCityStats').textContent =
+          `Troops: ${Math.floor(primaryNode.troops)}/${cfg.maxTroops} • +${cfg.regenRate.toFixed(1)}/s • Def ${cfg.defense}x`;
+
+        const btnUpg = document.getElementById('btnUpgradeCity');
+        const badge = document.getElementById('upgradeCostBadge');
+        if (cfg.upgradeCost) {
+          btnUpg.disabled = false;
+          btnUpg.classList.remove('opacity-50');
+          badge.textContent = `${cfg.upgradeCost} ⚔`;
+        } else {
+          btnUpg.disabled = true;
+          btnUpg.classList.add('opacity-50');
+          badge.textContent = 'MAX';
+        }
+      } else {
+        const totalSelectedTroops = validIds.reduce(
+          (sum, id) => sum + Math.floor(state.nodes[id].troops),
+          0
+        );
+        document.getElementById('selectedCityName').textContent = `${validIds.length} Cities Selected`;
+        document.getElementById('selectedCityStars').textContent = '⚔️';
+        document.getElementById('selectedCityStats').textContent = `Combined Army: ${totalSelectedTroops} troops ready to march`;
+        document.getElementById('upgradeCostBadge').textContent = 'Upgrade 1st';
+      }
+    }
+
+    // Button Event Listeners
+    document.getElementById('btnUpgradeCity').addEventListener('click', () => {
+      const validIds = [...state.selectedIds].filter(
+        id => state.nodes[id] && state.nodes[id].owner === 'shu'
+      );
+      if (validIds.length > 0) {
+        upgradeCity(validIds[0]);
+      }
+    });
+
+    document.getElementById('btnPct50').addEventListener('click', () => {
+      state.dispatchPercent = 0.5;
+      document.getElementById('btnPct50').classList.add('active');
+      document.getElementById('btnPct100').classList.remove('active');
+      sfx.playSelect();
+    });
+
+    document.getElementById('btnPct100').addEventListener('click', () => {
+      state.dispatchPercent = 1.0;
+      document.getElementById('btnPct100').classList.add('active');
+      document.getElementById('btnPct50').classList.remove('active');
+      sfx.playSelect();
+    });
+
+    document.getElementById('btnSelectAll').addEventListener('click', () => {
+      state.selectedIds.clear();
+      state.nodes.forEach(n => {
+        if (n.owner === 'shu') state.selectedIds.add(n.id);
+      });
+      sfx.playSelect();
+      updateSelectionUI();
+      showToast(`Selected all ${state.selectedIds.size} Shu cities!`);
+    });
+
+    document.getElementById('btnSpeed').addEventListener('click', e => {
+      state.gameSpeed = state.gameSpeed === 1 ? 2 : 1;
+      e.target.textContent = `${state.gameSpeed}x`;
+      e.target.classList.toggle('active', state.gameSpeed === 2);
+      sfx.playSelect();
+    });
+
+    document.getElementById('btnPause').addEventListener('click', e => {
+      state.paused = !state.paused;
+      e.target.textContent = state.paused ? '▶' : '⏸';
+      e.target.classList.toggle('active', state.paused);
+      showToast(state.paused ? 'Battle Paused' : 'Battle Resumed');
+    });
+
+    document.getElementById('btnRestart').addEventListener('click', () => {
+      loadStage(state.stageIndex);
+      showToast('Stage Restarted');
+    });
+
+    document.getElementById('btnSound').addEventListener('click', e => {
+      sfx.enabled = !sfx.enabled;
+      e.target.textContent = sfx.enabled ? '🔊' : '🔇';
+      if (sfx.enabled) sfx.playSelect();
+    });
+
+    document.getElementById('stageSelect').addEventListener('change', e => {
+      loadStage(parseInt(e.target.value, 10));
+    });
+
+    document.getElementById('difficultySelect').addEventListener('change', e => {
+      state.difficulty = e.target.value;
+      loadStage(state.stageIndex);
+      showToast(`Difficulty set to ${e.target.options[e.target.selectedIndex].text}`);
+    });
+
+    document.getElementById('btnHelp').addEventListener('click', () => {
+      state.paused = true;
+      document.getElementById('helpModal').classList.remove('hidden');
+    });
+
+    function closeHelpModal() {
+      document.getElementById('helpModal').classList.add('hidden');
+      state.paused = false;
+      sfx.init();
+      sfx.playMarch();
+    }
+    document.getElementById('btnCloseHelp').addEventListener('click', closeHelpModal);
+    document.getElementById('btnStartBattle').addEventListener('click', closeHelpModal);
+
+    document.getElementById('btnModalRestart').addEventListener('click', () => {
+      loadStage(state.stageIndex);
+    });
+
+    document.getElementById('btnNextStage').addEventListener('click', () => {
+      const nextIdx = (state.stageIndex + 1) % STAGES.length;
+      document.getElementById('stageSelect').value = `${nextIdx}`;
+      loadStage(nextIdx);
+    });
+
+    // --- 14. MAIN ANIMATION LOOP ---
+    let lastTimestamp = 0;
+    function gameLoop(timestamp) {
+      if (!lastTimestamp) lastTimestamp = timestamp;
+      const rawDt = Math.min(0.1, (timestamp - lastTimestamp) / 1000);
+      lastTimestamp = timestamp;
+
+      updateSimulation(rawDt);
+      render();
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+    window.onload = function () {
+      resizeCanvas();
+      loadStage(0);
+      state.paused = true; // Paused while welcome guide is open
+      requestAnimationFrame(gameLoop);
+    };
+  </script>
+</body>
+</html>
